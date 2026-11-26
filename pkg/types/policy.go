@@ -94,7 +94,7 @@ func (p Policy) MarshalDynamoDBAttributeValue() (awstypes.AttributeValue, error)
 	case RulePolicyAllowlistTransitive:
 		s = "6"
 	default:
-		return nil, fmt.Errorf("unknown policy value %q", p)
+		return nil, fmt.Errorf("unknown policy value %d", p)
 	}
 	return &awstypes.AttributeValueMemberN{Value: s}, nil
 }

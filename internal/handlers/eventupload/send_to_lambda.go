@@ -3,7 +3,7 @@ package eventupload
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/airbnb/rudolph/pkg/lambda"
 )
@@ -26,7 +26,7 @@ func sendToLambda(
 		},
 	)
 	if err != nil {
-		log.Printf("Lambda Failed: %s", err)
+		slog.Error("Event forwarding failed", "destination", "Lambda")
 		return fmt.Errorf("failed to events to AWS Lambda: %w", err)
 	}
 

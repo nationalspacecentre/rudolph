@@ -26,7 +26,7 @@ More information can be found in our [primer on Lockdown](/docs/lockdown.md).
 # Deployment
 
 ## Step 1) Deploy Rudolph
-Start by deploying rudolph ([docs/deploy.md](docs/deploy.md)).
+Start by deploying rudolph ([docs/deploy.md](docs/deploy.md)). For a single-device deployment managed outside this repository, see the [Lambda proof of concept guide](docs/lambda-poc.md).
 
 
 ## Step 2) Deploying Santa Agents

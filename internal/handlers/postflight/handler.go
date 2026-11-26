@@ -1,7 +1,7 @@
 package postflight
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -59,14 +59,15 @@ func (h *PostPostflightHandler) Handle(request events.APIGatewayProxyRequest) (*
 	// like "10 minutes ago and leaving it like that. Pretty dumb, derek!"
 	err = h.syncStateUpdater.updatePostflightDate(machineID)
 	if err != nil {
-		log.Printf("Failed to set final PostflightAt")
-		return response.APIResponse(http.StatusInternalServerError, err)
+		slog.Error("Failed to record postflight completion")
+		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	// Delete rules marked for deletion
 	err = h.ruleDestroyer.destroyMachineRulesMarkedForDeletion(machineID)
 	if err != nil {
-		return response.APIResponse(http.StatusInternalServerError, err)
+		slog.Error("Failed to delete stale machine rules")
+		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	// Optional: Archive the sync state

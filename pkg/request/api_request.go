@@ -1,7 +1,6 @@
 package request
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/airbnb/rudolph/pkg/response"
@@ -20,7 +19,6 @@ func GetMachineID(req events.APIGatewayProxyRequest) (machineID string, errorRes
 
 	if !found || len(machineID) == 0 {
 		// Unreachable code; API Gateway will never allow {machine_id} to be blank
-		log.Printf("ASSERTION FAILED: Received blank {machine_id}")
 		errorResponse, err = response.APIResponse(http.StatusBadRequest, response.ErrBlankPathParameterResponse)
 		return
 	}
@@ -28,7 +26,6 @@ func GetMachineID(req events.APIGatewayProxyRequest) (machineID string, errorRes
 	// Check if UUID is valid
 	if !(IsValidUUID(machineID)) {
 		// Refuse any non-valid UUID as a path parameter
-		log.Printf("ASSERTION FAILED: Received blank {machine_id}")
 		errorResponse, err = response.APIResponse(http.StatusBadRequest, response.ErrInvalidPathParameterResponse)
 		return
 	}

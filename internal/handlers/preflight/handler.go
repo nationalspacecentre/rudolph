@@ -1,7 +1,7 @@
 package preflight
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -78,18 +78,21 @@ func (h *PostPreflightHandler) handlePreflight(machineID string, preflightReques
 	// Save the state of the preflight request - this is the sensor state
 	err := h.stateTrackingService.saveSensorDataFromPreflightRequest(machineID, preflightRequest)
 	if err != nil {
+		slog.Error("Failed to save sensor data")
 		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	// Retrieve the intended configuration for the machine
 	machineConfiguration, err := h.machineConfigurationService.GetIntendedConfig(machineID)
 	if err != nil {
+		slog.Error("Failed to retrieve machine configuration")
 		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	// Get the previous sync state
 	prevSyncState, err := h.stateTrackingService.getSyncState(machineID)
 	if err != nil {
+		slog.Error("Failed to retrieve sync state")
 		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
@@ -113,7 +116,7 @@ func (h *PostPreflightHandler) handlePreflight(machineID string, preflightReques
 			prevSyncState,
 		)
 		if err != nil {
-			return response.APIResponse(http.StatusInternalServerError, err)
+			return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 		}
 	default:
 		performCleanSync = true
@@ -140,8 +143,8 @@ func (h *PostPreflightHandler) handlePreflight(machineID string, preflightReques
 	)
 
 	if err != nil {
-		err = fmt.Errorf("encountered error trying to save new sync state: %w", err)
-		return response.APIResponse(http.StatusInternalServerError, err)
+		slog.Error("Failed to save sync state")
+		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	// Construct the response

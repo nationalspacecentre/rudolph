@@ -2,7 +2,7 @@ package ruledownload
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/airbnb/rudolph/pkg/dynamodb"
@@ -27,18 +27,14 @@ func (d concreteGlobalRuleDownloader) handle(machineID string, cursor ruledownlo
 	ddbCursor := cursor.GetLastEvaluatedKey()
 	globalRules, lastEvaluatedKey, err := globalrules.GetPaginatedGlobalRules(d.queryer, cursor.BatchSize, ddbCursor)
 	if err != nil {
-		log.Printf("  GetPaginatedGlobalRules Error %s", err.Error())
-		return response.APIResponse(http.StatusInternalServerError, err)
+		slog.Error("Failed to query global rules")
+		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
-
-	log.Printf("  lastEvaluatedKey %s", lastEvaluatedKey)
 
 	nextCursor := cursor.CloneForNextPage()
 	if lastEvaluatedKey == nil {
-		log.Printf("     No more stuff to paginate over")
 		nextCursor.SetStrategy(ruledownloadStrategyMachine)
 	} else {
-		log.Printf("     More stuff to paginate over")
 		nextCursor.SetDynamodbLastEvaluatedKey(lastEvaluatedKey)
 	}
 
@@ -50,8 +46,8 @@ func (d concreteGlobalRuleDownloader) handle(machineID string, cursor ruledownlo
 	// Marshal the cursor to a string
 	jsonCursor, err := json.Marshal(nextCursor)
 	if err != nil {
-		log.Printf("  json.Marshal Error %s", err.Error())
-		return response.APIResponse(http.StatusInternalServerError, err)
+		slog.Error("Failed to serialize rule cursor")
+		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
 	return response.APIResponse(

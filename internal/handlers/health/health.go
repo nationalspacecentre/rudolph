@@ -46,7 +46,7 @@ func (h GetHealthHandler) healthHandler(request events.APIGatewayProxyRequest) (
 	if err != nil {
 		return response.APIResponse(http.StatusInternalServerError, map[string]string{
 			"status": "unhealthy",
-			"error":  err.Error(),
+			"error":  "Database check failed",
 		})
 	}
 

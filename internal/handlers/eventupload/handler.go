@@ -2,7 +2,7 @@ package eventupload
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -36,11 +36,17 @@ func (h *PostEventuploadHandler) Boot() (err error) {
 	switch handler {
 	case "FIREHOSE":
 		firehoseName := os.Getenv("FIREHOSE_NAME")
-		h.firehoseClient = firehose.GetClient(firehoseName, region)
+		h.firehoseClient, err = firehose.GetClient(firehoseName, region)
+		if err != nil {
+			return err
+		}
 		h.enableFirehose = true
 	case "KINESIS":
 		kinesisName := os.Getenv("KINESIS_NAME")
-		h.kinesisClient = kinesis.GetClient(kinesisName, region)
+		h.kinesisClient, err = kinesis.GetClient(kinesisName, region)
+		if err != nil {
+			return err
+		}
 		h.enableKinesis = true
 	case "NONE":
 		fallthrough
@@ -63,7 +69,6 @@ func (h *PostEventuploadHandler) Handles(request events.APIGatewayProxyRequest) 
 }
 
 func (h *PostEventuploadHandler) Handle(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Printf("EventUploadHandler request:\n%+v\n", request)
 	ctx := context.Background()
 
 	machineID, eventsRequest, errorResponse, err := parseRequest(request)
@@ -73,7 +78,7 @@ func (h *PostEventuploadHandler) Handle(request events.APIGatewayProxyRequest) (
 
 	if !h.enableFirehose && !h.enableKinesis && !h.enableLambda {
 		// Shortcircuit if no handlers are enabled
-		log.Printf("No eventupload handlers are enabled")
+		slog.Info("Event upload has no configured destination")
 		return response.APIResponse(http.StatusOK, map[string]string{"status": "ok"})
 	}
 

@@ -91,7 +91,7 @@ func TestHandler_Whoops(t *testing.T) {
 
 	assert.Empty(t, err)
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	assert.Equal(t, `{}`, resp.Body)
+	assert.JSONEq(t, `{"error":"Internal server error"}`, resp.Body)
 }
 
 func TestHandler_Response(t *testing.T) {

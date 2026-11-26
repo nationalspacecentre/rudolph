@@ -1,10 +1,12 @@
 package kinesis
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/aws/aws-sdk-go/aws"
-	awskinesis "github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awskinesis "github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 )
 
 func (c client) Send(machineID string, events KinesisEvents) (err error) {
@@ -15,14 +17,14 @@ func (c client) Send(machineID string, events KinesisEvents) (err error) {
 		return nil
 	}
 
-	putRecordsRecords := []*awskinesis.PutRecordsRequestEntry{}
+	putRecordsRecords := make([]types.PutRecordsRequestEntry, 0, len(events.Items))
 	for _, event := range events.Items {
 		item, err := json.Marshal(event)
 		if err != nil {
 			return err
 		}
 
-		record := &awskinesis.PutRecordsRequestEntry{
+		record := types.PutRecordsRequestEntry{
 			Data: item,
 
 			// 2021-05-13 - Using the machineID as a partition key
@@ -43,7 +45,7 @@ func (c client) Send(machineID string, events KinesisEvents) (err error) {
 		StreamName: aws.String(c.kinesisStream),
 	}
 
-	_, err = c.kinesisService.PutRecords(putRecordsInput)
+	_, err = c.kinesisService.PutRecords(context.Background(), putRecordsInput)
 
 	return
 }

@@ -2,7 +2,6 @@ package eventupload
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	apirequest "github.com/airbnb/rudolph/pkg/request"
@@ -15,7 +14,6 @@ func parseRequest(request events.APIGatewayProxyRequest) (machineID string, pars
 	if request.Resource != "/eventupload/{machine_id}" || request.HTTPMethod != "POST" {
 		// This code is intended to be unreachable, as AWS Lambda will never route to this handler
 		// with the wrong method, unless misconfigured.
-		log.Printf("ASSERTION FAILED: Reached unreachable route code under /eventupload")
 		errorResponse, err = response.APIResponse(http.StatusMethodNotAllowed, nil)
 		return
 	}
@@ -38,8 +36,7 @@ func parseRequest(request events.APIGatewayProxyRequest) (machineID string, pars
 
 	// Parse the request
 	err = json.Unmarshal([]byte(request.Body), &parsedRequest)
-	if err != nil {
-		log.Printf("%s\n%s", err.Error(), "request body unmarshal was not successful")
+	if err != nil || parsedRequest == nil {
 		errorResponse, err = response.APIResponse(http.StatusBadRequest, response.ErrInvalidBodyResponse)
 		return
 	}

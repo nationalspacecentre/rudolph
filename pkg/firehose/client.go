@@ -1,9 +1,10 @@
 package firehose
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/firehose"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/firehose"
 )
 
 type FirehoseClient interface {
@@ -12,14 +13,21 @@ type FirehoseClient interface {
 
 type client struct {
 	firehoseStreamName string
-	firehoseService    *firehose.Firehose
+	firehoseService    putRecordBatchAPI
 }
 
-func GetClient(firehoseStreamName string, awsregion string) FirehoseClient {
-	sess := session.Must(session.NewSession())
+type putRecordBatchAPI interface {
+	PutRecordBatch(context.Context, *firehose.PutRecordBatchInput, ...func(*firehose.Options)) (*firehose.PutRecordBatchOutput, error)
+}
+
+func GetClient(firehoseStreamName string, awsregion string) (FirehoseClient, error) {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(awsregion))
+	if err != nil {
+		return nil, err
+	}
 
 	return client{
 		firehoseStreamName: firehoseStreamName,
-		firehoseService:    firehose.New(sess, aws.NewConfig().WithRegion(awsregion)),
-	}
+		firehoseService:    firehose.NewFromConfig(cfg),
+	}, nil
 }

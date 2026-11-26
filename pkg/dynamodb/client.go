@@ -35,7 +35,7 @@ func GetClientWithTimeout(inputTableName string, region string, timeout time.Dur
 	// Create Amazon S3 API client using path style addressing.
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		log.Fatal("Unable to load AWS configuration for DynamoDB")
 	}
 
 	client := dynamodb.NewFromConfig(cfg)

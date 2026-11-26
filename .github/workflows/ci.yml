@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GOTOOLCHAIN: local
+      GOFLAGS: -mod=readonly
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: Verify, build and test
+        run: |
+          go mod download
+          go mod verify
+          go build ./...
+          go vet ./...
+          go test ./...
+      - name: Scan Go dependencies
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 govulncheck -tags=lambda.norpc -test -scan=package ./...
+      - name: Package and verify Lambda ZIPs
+        run: |
+          make build
+          ./scripts/verify-lambda-zips.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rudolph-lambda-linux-arm64
+          path: |
+            build/package/api_deployment.zip
+            build/package/api_authorizer_deployment.zip
+          if-no-files-found: error

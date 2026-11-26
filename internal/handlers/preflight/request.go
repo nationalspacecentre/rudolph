@@ -22,7 +22,7 @@ func parseRequest(request events.APIGatewayProxyRequest) (parsedRequest *Preflig
 	}
 
 	err = json.Unmarshal([]byte(request.Body), &parsedRequest)
-	if err != nil {
+	if err != nil || parsedRequest == nil {
 		errorResponse, err = response.APIResponse(http.StatusBadRequest, response.ErrInvalidBodyResponse)
 		return
 	}

@@ -111,3 +111,13 @@ func Test_ConcreteRuledownloadCursorService_ConstructCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestConstructCursorWithoutPreflightState(t *testing.T) {
+	service := concreteRuledownloadCursorService{
+		getter: mockGetter(func(dynamodb.PrimaryKey, bool) (*awsdynamodb.GetItemOutput, error) {
+			return &awsdynamodb.GetItemOutput{}, nil
+		}),
+	}
+	_, err := service.ConstructCursor(RuledownloadRequest{}, "machine-id")
+	assert.EqualError(t, err, "sync state missing")
+}

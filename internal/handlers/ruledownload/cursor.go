@@ -1,6 +1,7 @@
 package ruledownload
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -102,6 +103,10 @@ func (c concreteRuledownloadCursorService) ConstructCursor(ruledownloadRequest R
 		if eerr != nil {
 			err = fmt.Errorf("failed to get previous syncstate: %w", eerr)
 			return
+		}
+
+		if syncState == nil {
+			return cursor, errors.New("sync state missing")
 		}
 
 		if syncState.CleanSync {

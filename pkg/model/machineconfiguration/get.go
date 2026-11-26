@@ -231,8 +231,7 @@ func GetIntendedConfig(client dynamodb.GetItemAPI, machineID string) (intendedCo
 	}
 
 	if config == nil {
-		log.Printf("no config items found for %s", machineID)
-		log.Printf("%s", "Retrieving global config")
+		log.Print("Machine configuration missing, retrieving global configuration")
 
 		config, err = GetGlobalConfig(client)
 		if err != nil {

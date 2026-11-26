@@ -78,7 +78,7 @@ func daysSinceLastCleanSync(timeProvider clock.TimeProvider, prevSyncState *sync
 	lastCleanSyncTime, err := clock.ParseRFC3339(prevSyncState.LastCleanSync)
 	if err != nil {
 		// Disregard the error
-		log.Printf("failed to determine number of days since last sync from value: (%s); going to clean sync anyway", prevSyncState.LastCleanSync)
+		log.Print("Invalid last clean sync timestamp, requesting clean sync")
 		return infinity
 	}
 

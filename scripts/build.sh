@@ -1,65 +1,35 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# Figure out the project's basepath
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
-DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
-
-# Establish directories
-BUILD_DIR=$DIR/build
-LINUX_BUILD_DIR=$BUILD_DIR/linux
-LINUX_BUILD_DIR_API=$LINUX_BUILD_DIR/api
-LINUX_BUILD_DIR_AUTHORIZER=$LINUX_BUILD_DIR/authorizer
-MACOS_BUILD_DIR=$BUILD_DIR/macos
-APPS_DIR=$DIR/cmd
-CLI_NAME=rudolph
-CLI_BUILD_DIR=$BUILD_DIR/cli
-PKG_DIR=$BUILD_DIR/package
-API_DEPLOYMENT_ZIP_PATH=$PKG_DIR/api_deployment.zip
-API_AUTHORIZER_DEPLOYMENT_ZIP_PATH=$PKG_DIR/api_authorizer_deployment.zip
-
+DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-# Cleanup from previous run(s)
-rm -rf $BUILD_DIR
+mkdir -p build/package
+staging="$(mktemp -d build/package/.tmp.XXXXXX)"
+trap 'rm -f "$staging/api.zip" "$staging/authorizer.zip"; rmdir "$staging"' EXIT
 
-# Do the build things
-echo "*** compiling application binaries... ***"
+echo "Building Linux ARM64 Lambda packages"
+for target in api authorizer; do
+    bootstrap="build/linux/$target/bootstrap"
+    GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -mod=readonly -trimpath -tags lambda.norpc -o "$bootstrap" "./cmd/$target"
+    chmod 755 "$bootstrap"
 
-echo "  compiling api in linux:arm64..."
-GOOS=linux GOARCH=arm64 go build -o $LINUX_BUILD_DIR_API/bootstrap $APPS_DIR/api
+    package="build/package/api_deployment.zip"
+    if [ "$target" = authorizer ]; then
+        package="build/package/api_authorizer_deployment.zip"
+    fi
+    zip -q -j "$staging/$target.zip" "$bootstrap"
+    mv -f "$staging/$target.zip" "$package"
+    echo "  $package"
+done
 
-echo "  compiling authorizer in linux:arm64..."
-GOOS=linux GOARCH=arm64 go build -o $LINUX_BUILD_DIR_AUTHORIZER/bootstrap $APPS_DIR/authorizer
-
-if [ "$(uname)" == "Darwin" ]; then
-    echo "  compiling cross-compatible macOS cli..."
-    GOOS=darwin GOARCH=amd64 go build -o $MACOS_BUILD_DIR/cli_amd64 $APPS_DIR/cli
-    GOOS=darwin GOARCH=arm64 go build -o $MACOS_BUILD_DIR/cli_arm64 $APPS_DIR/cli
-    lipo -create -output $MACOS_BUILD_DIR/cli $MACOS_BUILD_DIR/cli_amd64 $MACOS_BUILD_DIR/cli_arm64
-    ln -sf $MACOS_BUILD_DIR/cli $DIR/$CLI_NAME
+if [ "$(uname)" = Darwin ]; then
+    echo "Building universal macOS CLI"
+    GOOS=darwin GOARCH=amd64 go build -mod=readonly -o build/macos/cli_amd64 ./cmd/cli
+    GOOS=darwin GOARCH=arm64 go build -mod=readonly -o build/macos/cli_arm64 ./cmd/cli
+    lipo -create -output build/macos/cli build/macos/cli_amd64 build/macos/cli_arm64
+    ln -sf "$DIR/build/macos/cli" "$DIR/rudolph"
 else
-    echo "  compiling cli..."
-    go build -o $CLI_BUILD_DIR/cli $APPS_DIR/cli
-fi
-
-echo "*** packaging... ***"
-
-mkdir $PKG_DIR
-# remember zip 2nd arg zips up all the specified directories. We omit the dir info by cd,
-# but you could use the -j option as well.
-cd $LINUX_BUILD_DIR_API; zip -r $API_DEPLOYMENT_ZIP_PATH *
-cd $LINUX_BUILD_DIR_AUTHORIZER; zip -r $API_AUTHORIZER_DEPLOYMENT_ZIP_PATH *
-
-echo "*** complete ***"
-
-echo "  created:"
-echo "    API: $API_DEPLOYMENT_ZIP_PATH"
-echo "    API Authorizer: $API_AUTHORIZER_DEPLOYMENT_ZIP_PATH"
-if [ "$(uname)" == "Darwin" ]; then
-    echo "    generated cross-compiled macOS cli"
-    echo "    CLI: $MACOS_BUILD_DIR/cli"
-else
-    echo "    CLI: $CLI_BUILD_DIR/cli"
+    echo "Building native CLI"
+    go build -mod=readonly -o build/cli/cli ./cmd/cli
 fi

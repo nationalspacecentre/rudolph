@@ -2,7 +2,6 @@ package postflight
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	apirequest "github.com/airbnb/rudolph/pkg/request"
@@ -27,7 +26,6 @@ func parseRequest(request events.APIGatewayProxyRequest) (machineID string, pars
 		// Parse the request
 		err = json.Unmarshal([]byte(request.Body), &parsedRequest)
 		if err != nil {
-			log.Printf("%s\n%s", err.Error(), "request body unmarshal was not successful")
 			errorResponse, err = response.APIResponse(http.StatusBadRequest, response.ErrInvalidBodyResponse)
 			return
 		}

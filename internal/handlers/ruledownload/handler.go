@@ -2,7 +2,7 @@ package ruledownload
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -67,15 +67,14 @@ func (h *PostRuledownloadHandler) Handle(request events.APIGatewayProxyRequest) 
 	machineID, ok := request.PathParameters["machine_id"]
 	if !ok {
 		// Unreachable code; API Gateway will never allow {machine_id} to be blank
-		log.Printf("ASSERTION FAILED: Received blank {machine_id}")
+		slog.Warn("Rule download is missing a machine ID")
 		return response.APIResponse(http.StatusBadRequest, nil)
 	}
 
 	// Parse the request
 	var ruledownloadRequest *RuledownloadRequest
 	err := json.Unmarshal([]byte(request.Body), &ruledownloadRequest)
-	if err != nil {
-		log.Printf("  Failed to unmarshall ruledownload request Error %s", err.Error())
+	if err != nil || ruledownloadRequest == nil {
 		return response.APIResponse(http.StatusBadRequest, response.ErrInvalidBodyResponse)
 	}
 
@@ -83,7 +82,6 @@ func (h *PostRuledownloadHandler) Handle(request events.APIGatewayProxyRequest) 
 		ruledownloadRequest.Cursor = &ruledownloadCursor{}
 		err = json.Unmarshal([]byte(ruledownloadRequest.RawCursor), ruledownloadRequest.Cursor)
 		if err != nil {
-			log.Printf("  Failed to unmarshall cursor Error %s", err.Error())
 			return response.APIResponse(http.StatusBadRequest, response.ErrInvalidBodyResponse)
 		}
 	}
@@ -95,6 +93,7 @@ func (h *PostRuledownloadHandler) Handle(request events.APIGatewayProxyRequest) 
 func (h *PostRuledownloadHandler) handleRuleDownload(machineID string, ruledownloadRequest *RuledownloadRequest) (*events.APIGatewayProxyResponse, error) {
 	cursor, err := h.cursorService.ConstructCursor(*ruledownloadRequest, machineID)
 	if err != nil {
+		slog.Error("Failed to initialize rule download cursor")
 		return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 	}
 
@@ -112,6 +111,6 @@ func (h *PostRuledownloadHandler) handleRuleDownload(machineID string, ruledownl
 	}
 
 	// How did you get here??
-	log.Printf("Unreachable code reached in handleRuleDownload()!")
+	slog.Error("Unknown rule download strategy")
 	return response.APIResponse(http.StatusInternalServerError, response.ErrInternalServerErrorResponse)
 }

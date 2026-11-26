@@ -28,7 +28,7 @@ func GetClient(
 		config.WithRegion(awsregion),
 	)
 	if err != nil {
-		log.Fatalf("unable to load AWS/Lambda SDK config, %v", err)
+		log.Fatal("Unable to load AWS configuration for Lambda")
 	}
 
 	svc := lambda.NewFromConfig(cfg)

@@ -1,7 +1,9 @@
 package handlers
 
 import (
-	"log"
+	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/airbnb/rudolph/internal/handlers/eventupload"
@@ -12,6 +14,7 @@ import (
 	"github.com/airbnb/rudolph/internal/handlers/xsrf"
 	"github.com/airbnb/rudolph/pkg/response"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 var (
@@ -29,30 +32,39 @@ func init() {
 	}
 }
 
-func ApiRouter(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Printf("Api Request: %+v", request)
-
-	response, err := getResponse(request)
-
-	if err != nil {
-		log.Printf("Api ERROR: %+v", err)
+func ApiRouter(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+	logger := slog.Default()
+	if invocation, ok := lambdacontext.FromContext(ctx); ok {
+		logger = logger.With("request_id", invocation.AwsRequestID)
 	}
-	log.Printf("Api Response: %+v", response)
 
-	return response, err
-}
-
-func getResponse(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	for _, h := range handlers {
-		if h.Handles(request) {
-			if h.Boot() != nil {
-				return response.APIResponse(http.StatusInternalServerError, nil)
-			}
-			return h.Handle(request)
+		if !h.Handles(request) {
+			continue
 		}
+
+		// Handles matches a fixed resource template and method before either is logged.
+		logger = logger.With("route", request.Resource, "method", request.HTTPMethod)
+		if err := h.Boot(); err != nil {
+			logger.Error("Handler initialization failed", "status", http.StatusInternalServerError)
+			return response.APIResponse(http.StatusInternalServerError, nil)
+		}
+
+		resp, err := h.Handle(request)
+		if err != nil || resp == nil {
+			logger.Error("Handler failed")
+			// Lambda logs returned errors, so do not propagate an internal error message.
+			return nil, errors.New("request handling failed")
+		}
+		level := slog.LevelInfo
+		if resp.StatusCode >= http.StatusInternalServerError {
+			level = slog.LevelError
+		}
+		logger.Log(ctx, level, "Request completed", "status", resp.StatusCode)
+		return resp, nil
 	}
 
-	log.Printf("ERROR: ApiRouter failure: unrouteable request: [%+v] %+v", request.HTTPMethod, request.Resource)
+	logger.Warn("No matching route", "status", http.StatusMethodNotAllowed)
 	return response.APIResponse(http.StatusMethodNotAllowed, nil)
 }
 

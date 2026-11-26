@@ -61,10 +61,10 @@ deps:
 	go mod tidy
 
 # Compiles golang source into binaries
-# We use linux amd64 binaries so AWS Lambda can run them
+# Lambda packages target Linux ARM64 on provided.al2023.
 #
-build: deps
-	@sh -c "'$(CURDIR)/scripts/build.sh'"
+build:
+	@./scripts/build.sh
 
 # run all golang unit tests
 #

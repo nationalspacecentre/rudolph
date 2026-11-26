@@ -1,16 +1,11 @@
 package authorizer
 
 import (
-	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
-)
-
-var (
-	errBlankRequestBody = errors.New("Request body is blank")
 )
 
 type authorizerEnvironment struct {
@@ -33,8 +28,6 @@ func init() {
 
 // HandleAuthorizerRequest is the handler to be used by the authorizer function
 func HandleAuthorizerRequest(request events.APIGatewayProxyRequest) (*events.APIGatewayCustomAuthorizerResponse, error) {
-	log.Printf("lambda request - HandleAuthorizerRequest:\n%+v\n", request)
-
 	if request.HTTPMethod == "GET" && request.Path == "/health" {
 		return allowResponse("HEALTH_CHECK"), nil
 	}
@@ -84,6 +77,7 @@ func HandleAuthorizerRequest(request events.APIGatewayProxyRequest) (*events.API
 }
 
 func denyResponse(denyReason string) *events.APIGatewayCustomAuthorizerResponse {
+	slog.Info("Authorizer decision", "decision", "deny", "reason", denyReason)
 	context := make(map[string]interface{}, 1)
 	context["DenyReason"] = denyReason
 
@@ -105,6 +99,7 @@ func denyResponse(denyReason string) *events.APIGatewayCustomAuthorizerResponse 
 }
 
 func allowResponse(machineID string) *events.APIGatewayCustomAuthorizerResponse {
+	slog.Info("Authorizer decision", "decision", "allow")
 	context := make(map[string]interface{}, 1)
 	context["MachineID"] = machineID
 

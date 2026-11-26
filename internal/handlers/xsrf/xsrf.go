@@ -1,7 +1,6 @@
 package xsrf
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/airbnb/rudolph/pkg/response"
@@ -21,8 +20,6 @@ func (h *PostXSRFHandler) Handles(request events.APIGatewayProxyRequest) bool {
 }
 
 func (h *PostXSRFHandler) Handle(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Printf("XSRFHandler request:\n%+v\n", request)
-
 	// FIXME (derek.wang) just returning stub for now
 	return response.APIResponse(http.StatusOK, map[string]string{"status": "ok"})
 }
